@@ -31,7 +31,7 @@ So, for "resource" I recommend the HTTP example on Wikipedia, as well as "Beej's
  */
 #define PORT "3490"  // the port users will be connecting to
 #define BACKLOG 10   // how many pending connections queue will hold
-#define MAXDATASIZE 1024*2*2*2   // how many pending connections queue will hold
+#define MAXDATASIZE 1024*2*2*2   // Max size of a single incoming message
 
 
 void sigchld_handler(int s)
