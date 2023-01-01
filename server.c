@@ -22,7 +22,10 @@
 
 The HTTP 1.x protocol itself is pretty dead simple (if you ignore chunked requests/responses and such) and the more interesting part was actually the socket code.
 
-Back in school, our teacher had us write a simple forking server and consult the corresponding man pages (man 2 socket, man 7 socket, man 7 tcp). It was an acceptable minimal solution to not even look at the client request, respond with a static string containing a dummy response header and HTML page, which absolutely works. Bonus points for parsing the request path and sending a file back, more extra points if the path was a directory and your server sends back an "index.html" file, further points if it instead generates an HTML directory listing on the fly.
+Back in school, our teacher had us write a simple forking server and consult the corresponding man pages (man 2 socket, man 7 socket, man 7 tcp).
+It was an acceptable minimal solution to not even look at the client request, respond with a static string containing a dummy response header and HTML page, which absolutely works.
+Bonus points for parsing the request path and sending a file back, more extra points if the path was a directory and your server sends back an "index.html" file
+further points if it instead generates an HTML directory listing on the fly.
 
 So, for "resource" I recommend the HTTP example on Wikipedia, as well as "Beej's guide to network programming" (as have others), as well as the man pages for quick reference.
  */
@@ -127,6 +130,11 @@ int main() {
            continue;
        }
 
+       inet_ntop(their_addr.ss_family,
+           get_in_addr((struct sockaddr *)&their_addr),
+           s, sizeof s);
+       printf("server: got connection from %s\n", s);
+
        // Receieve data from the client
        if ((numbytes = recv(new_fd, buf, MAXDATASIZE-1, 0)) == -1) {
                perror("recv");
@@ -136,15 +144,9 @@ int main() {
        printf("Received '%s'\n", buf);
 
        // Send response to client
-
-       inet_ntop(their_addr.ss_family,
-           get_in_addr((struct sockaddr *)&their_addr),
-           s, sizeof s);
-       printf("server: got connection from %s\n", s);
-
        if (!fork()) { // this is the child process
            close(sockfd); // child doesn't need the listener
-           char *msg = "HTTP/1.1 200 OK\r";
+           char *msg = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-length: 45\n\n<!doctype html><html><head>HEYO</head></html>\r";
            //printf("%d\n", strlen(msg));
 
            if (send(new_fd, msg, strlen(msg), 0) == -1) perror("send");
