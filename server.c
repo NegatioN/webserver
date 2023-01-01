@@ -28,6 +28,7 @@ So, for "resource" I recommend the HTTP example on Wikipedia, as well as "Beej's
  */
 #define PORT "3490"  // the port users will be connecting to
 #define BACKLOG 10   // how many pending connections queue will hold
+#define MAXDATASIZE 1024*2*2*2   // how many pending connections queue will hold
 
 
 void sigchld_handler(int s)
@@ -52,7 +53,7 @@ void *get_in_addr(struct sockaddr *sa)
 }
 
 int main() {
-   int sockfd, new_fd;  // listen on sock_fd, new connection on new_fd
+   int sockfd, new_fd, numbytes;  // listen on sock_fd, new connection on new_fd, numbytes received
    struct addrinfo hints, *servinfo, *p;
    struct sockaddr_storage their_addr; // connector's address information
    socklen_t sin_size;
@@ -60,6 +61,7 @@ int main() {
    int yes=1;
    char s[INET6_ADDRSTRLEN];
    int rv;
+   char buf[MAXDATASIZE];
 
    // START connection options
    memset(&hints, 0, sizeof hints);
@@ -125,6 +127,16 @@ int main() {
            continue;
        }
 
+       // Receieve data from the client
+       if ((numbytes = recv(new_fd, buf, MAXDATASIZE-1, 0)) == -1) {
+               perror("recv");
+               exit(1);
+           }
+       buf[numbytes] = '\0'; // null terminate the recieved string
+       printf("Received '%s'\n", buf);
+
+       // Send response to client
+
        inet_ntop(their_addr.ss_family,
            get_in_addr((struct sockaddr *)&their_addr),
            s, sizeof s);
@@ -132,8 +144,10 @@ int main() {
 
        if (!fork()) { // this is the child process
            close(sockfd); // child doesn't need the listener
-           if (send(new_fd, "Hello, world!", 13, 0) == -1)
-               perror("send");
+           char *msg = "HTTP/1.1 200 OK\r";
+           //printf("%d\n", strlen(msg));
+
+           if (send(new_fd, msg, strlen(msg), 0) == -1) perror("send");
            close(new_fd);
            exit(0);
        }
