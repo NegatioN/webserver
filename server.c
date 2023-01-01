@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -33,18 +32,6 @@ So, for "resource" I recommend the HTTP example on Wikipedia, as well as "Beej's
 #define BACKLOG 10   // how many pending connections queue will hold
 #define MAXDATASIZE 1024*2*2*2   // Max size of a single incoming message
 
-
-void sigchld_handler(int s)
-{
-    // waitpid() might overwrite errno, so we save and restore it:
-    int saved_errno = errno;
-
-    while(waitpid(-1, NULL, WNOHANG) > 0);
-
-    errno = saved_errno;
-}
-
-
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
 {
@@ -60,7 +47,6 @@ int main() {
    struct addrinfo hints, *servinfo, *p;
    struct sockaddr_storage their_addr; // connector's address information
    socklen_t sin_size;
-   struct sigaction sa;
    int yes=1;
    char s[INET6_ADDRSTRLEN];
    int rv;
@@ -71,10 +57,6 @@ int main() {
    hints.ai_family = AF_UNSPEC; // Dont care if IPv4 or IPv6
    hints.ai_socktype = SOCK_STREAM; // SOCK_STREAM for TCP, SOCK_DGRAM for UDP
    hints.ai_flags = AI_PASSIVE; // use my IP
-
-   sa.sa_handler = sigchld_handler; // reap all dead processes
-   sigemptyset(&sa.sa_mask);
-   sa.sa_flags = SA_RESTART;
    // END connection options
 
    if ((rv = getaddrinfo(NULL, PORT, &hints, &servinfo)) != 0) {
@@ -115,11 +97,6 @@ int main() {
        exit(1);
    }
 
-   if (sigaction(SIGCHLD, &sa, NULL) == -1) {
-       perror("sigaction");
-       exit(1);
-   }
-
    printf("server: waiting for connections...\n");
 
    while(1) {  // main accept() loop
@@ -157,12 +134,4 @@ int main() {
    }
 
    return 0;
-
-
-    //sockfd = socket(AF_UNSPEC, SOCK_DGRAM, 0); // man 2 socket says there is usually only one viable protocol, so inputting 0 should be fine (?)
-
-
-    //TODO see when someone has written something to the socket
-    //TODO do TCP handshakes?
-    //TODO write a http response into the socket?
 }
