@@ -38,7 +38,6 @@ void *get_in_addr(struct sockaddr *sa)
     if (sa->sa_family == AF_INET) {
         return &(((struct sockaddr_in*)sa)->sin_addr);
     }
-
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
 }
 
@@ -84,7 +83,6 @@ int main() {
 
        break;
    }
-
    freeaddrinfo(servinfo); // all done with this structure
 
    if (p == NULL)  {
@@ -109,7 +107,7 @@ int main() {
 
        inet_ntop(their_addr.ss_family,
            get_in_addr((struct sockaddr *)&their_addr),
-           s, sizeof s);
+           s, sizeof s); // parse the IP address into a string
        printf("server: got connection from %s\n", s);
 
        // Receieve data from the client
@@ -121,11 +119,16 @@ int main() {
        printf("Received '%s'\n", buf);
 
        // Send response to client
+       char html[] = "<!doctype html><html><head>HEYO</head></html>\r"; // This could be a freshly read file
+       char http[] = "HTTP/1.1 200 OK\nContent-Type: text/html\n";
+       char outbuffer[50];
+       snprintf(outbuffer, 50, "Content-length: %d\n\n", (unsigned)strlen(html)-1); // format content-length
+       strcat(http, outbuffer); // Append content-length
+       strcat(http, html); // append html data
+
        if (!fork()) { // this is the child process
            close(sockfd); // child doesn't need the listener
-           char *msg = "HTTP/1.1 200 OK\nContent-Type: text/html\nContent-length: 45\n\n<!doctype html><html><head>HEYO</head></html>\r";
-           //printf("%d\n", strlen(msg));
-
+           char *msg = strdup(http); // This needs to be contant to be passed to send() ?
            if (send(new_fd, msg, strlen(msg), 0) == -1) perror("send");
            close(new_fd);
            exit(0);
