@@ -30,7 +30,7 @@ So, for "resource" I recommend the HTTP example on Wikipedia, as well as "Beej's
  */
 #define PORT "3490"  // the port users will be connecting to
 #define BACKLOG 10   // how many pending connections queue will hold
-#define MAXDATASIZE 1024*2*2*2   // Max size of a single incoming message
+#define MAXDATASIZE 1024*2*2*2*2*2*2   // Max size of a single incoming message
 
 // get sockaddr, IPv4 or IPv6:
 void *get_in_addr(struct sockaddr *sa)
@@ -39,6 +39,27 @@ void *get_in_addr(struct sockaddr *sa)
         return &(((struct sockaddr_in*)sa)->sin_addr);
     }
     return &(((struct sockaddr_in6*)sa)->sin6_addr);
+}
+
+char *file_string(char* filename){
+    char* buffer = 0;
+    long length;
+    FILE * f = fopen(filename, "rb");
+
+    if (f)
+    {
+      fseek(f, 0, SEEK_END);
+      length = ftell(f);
+      fseek(f, 0, SEEK_SET);
+      buffer = malloc(length);
+      if (buffer)
+      {
+        fread(buffer, 1, length, f);
+      }
+      fclose (f);
+    }
+
+    return buffer;
 }
 
 int main() {
@@ -67,6 +88,12 @@ int main() {
        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
            perror("server: socket");
            continue;
+
+       }
+       int yes = 1;
+       if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+           perror("setsockopt");
+           exit(1);
        }
 
        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1) {
@@ -112,9 +139,18 @@ int main() {
        buf[numbytes] = '\0'; // null terminate the recieved string
        printf("Received '%s'\n", buf);
 
+	   // Use the request path (2nd token split by whitespace) as the absolute local filepath and open it
+	   char *token;
+	   token = strtok(buf, " ");
+	   token = strtok(NULL, " ");
+	   printf("token: %s\n", token);
+
+       //char html[] = "<!doctype html><html><head>HEYO</head></html>\r"; // This could be a freshly read file
+	   char *html = file_string(token);
+
        // Send response to client
-       char html[] = "<!doctype html><html><head>HEYO</head></html>\r"; // This could be a freshly read file
-       char http[] = "HTTP/1.1 200 OK\nContent-Type: text/html\n";
+       //TODO properly size the http response.
+       char http[1000000] = "HTTP/1.1 200 OK\nContent-Type: text/html;charset=utf-8\n";
        char outbuffer[50];
        snprintf(outbuffer, 50, "Content-length: %d\n\n", (unsigned)strlen(html)-1); // format content-length
        strcat(http, outbuffer); // Append content-length
